@@ -1,4 +1,4 @@
-name: Deploy to Netlify
+name: Auto Deploy Pages to Netlify
 
 on:
   push:
@@ -8,11 +8,16 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Trigger Netlify Build
         run: |
           curl -X POST \
-          -H "Authorization: Bearer ${{ secrets.NETLIFY_AUTH_TOKEN }}" \
-          https://api.netlify.com/api/v1/sites/${{ secrets.NETLIFY_SITE_ID }}/builds
+          -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
+          https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID/builds
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
