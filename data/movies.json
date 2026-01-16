@@ -1,1 +1,32 @@
-
+[
+{
+  "title": "Bindash Aunty",
+  "slug": "bindash-aunty",
+  "thumbnail": "https://xmaza.ac/wp-content/uploads/2025/01/Bindaas-Aunty.webp",
+  "type": "movie"
+},
+{
+  "title": "Chalu Mal",
+  "slug": "chalu-mal",
+  "thumbnail": "https://xmaza.ac/wp-content/uploads/2025/01/Chalu-Maal.webp",
+  "type": "movie"
+},
+{
+  "title": "Gili danda",
+  "slug": "gili-danda",
+  "thumbnail": "https://xmaza.ac/wp-content/uploads/2025/01/Gili-Danda.webp",
+  "type": "movie"
+},
+{
+  "title": "KudaKari",
+  "slug": "kudakari",
+  "thumbnail": "https://xmaza.ac/wp-content/uploads/2025/01/Kudakari.webp",
+  "type": "movie"
+},
+{
+  "title": "Mai Pyaasi Tu Sawan",
+  "slug": "mai-pyasi-tu-sawan",
+  "thumbnail": "https://xmaza.ac/wp-content/uploads/2025/01/Mai-Pyaasi-Tu-Sawan.webp",
+  "type": "movie"
+}
+]
