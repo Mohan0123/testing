@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Admin Dashboard</title>
+    <style>
+        :root {
+            --bg-body: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --primary: #3b82f6;
+            --border: #e2e8f0;
+            --movie-color: #8b5cf6;
+            --series-color: #10b981;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); height: 100vh; }
+
+        /* --- Login Screen Styles --- */
+        #login-view {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #eef2f6;
+        }
+        .login-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .login-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        .error-msg { color: var(--danger); font-size: 0.9rem; margin-bottom: 10px; display: none; }
+
+        /* --- Dashboard Layout (Hidden by default) --- */
+        #dashboard-view { display: none; padding-bottom: 50px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 30px; gap: 15px; }
+        h1 { font-size: 1.5rem; color: var(--text-main); }
+        
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .btn { padding: 8px 16px; border: 1px solid var(--border); background: var(--bg-card); cursor: pointer; border-radius: 6px; font-size: 0.9rem; transition: all 0.2s; }
+        .btn:hover { background: #f8fafc; border-color: var(--primary); color: var(--primary); }
+        .btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-logout { background: var(--danger); color: white; border: none; }
+        .btn-logout:hover { background: #dc2626; color: white; }
+        
+        input[type="date"] { padding: 7px; border: 1px solid var(--border); border-radius: 6px; }
+
+        /* --- Summary Cards --- */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--bg-card); padding: 20px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--border); }
+        .card h3 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+        .card .value { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+        .card .sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; }
+
+        /* --- Main Content Area --- */
+        .content-layout { display: grid; grid-template-columns: 350px 1fr; gap: 25px; }
+        @media (max-width: 1024px) { .content-layout { grid-template-columns: 1fr; } }
+
+        /* --- Trending & Table --- */
+        .trending-list { display: flex; flex-direction: column; gap: 15px; }
+        .trending-item { display: flex; align-items: center; gap: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .trending-rank { font-size: 1.2rem; font-weight: bold; color: var(--text-muted); width: 20px; }
+        .trending-thumb { width: 60px; height: 80px; object-fit: cover; border-radius: 6px; background: #eee; }
+        .trending-info h4 { font-size: 0.95rem; margin-bottom: 4px; }
+        .trending-stats { font-size: 0.85rem; color: var(--text-muted); }
+
+        .table-container { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .toolbar { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; background: #f8fafc; }
+        .search-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; }
+        .filter-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #f8fafc; padding: 12px 15px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted); position: sticky; top: 0; }
+        td { padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 0.9rem; vertical-align: middle; }
+        tr:hover { background: #fcfcfc; }
+        .thumb-cell { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge.movie { background: #efe9fe; color: var(--movie-color); }
+        .badge.series { background: #d1fae5; color: var(--series-color); }
+        .link-btn { text-decoration: none; color: var(--primary); font-weight: 600; font-size: 0.85rem; }
+
+        /* --- Utilities --- */
+        .loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); display:flex; justify-content:center; align-items:center; z-index: 1000; display: none; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="login-view">
+        <div class="login-card">
+            <h2 style="margin-bottom: 20px;">Admin Login</h2>
+            <div id="login-error" class="error-msg">Invalid email or password</div>
+            <input type="email" id="email" class="login-input" placeholder="Admin Email">
+            <input type="password" id="password" class="login-input" placeholder="Password">
+            <button class="btn active" style="width: 100%; margin-top: 10px;" onclick="handleLogin()">Login Dashboard</button>
+        </div>
+    </div>
+
+    <div id="dashboard-view">
+        <div class="container">
+            <header>
+                <h1>Admin Dashboard</h1>
+                <div class="controls">
+                    <button class="btn active" onclick="setDateRange('today')" id="btn-today">Today</button>
+                    <button class="btn" onclick="setDateRange('yesterday')" id="btn-yesterday">Yesterday</button>
+                    <button class="btn" onclick="setDateRange('last7')" id="btn-last7">Last 7 Days</button>
+                    <span style="color:var(--text-muted)">|</span>
+                    <input type="date" id="date-picker" onchange="setDateRange('custom')">
+                    <button class="btn btn-logout" onclick="handleLogout()">Logout</button>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>Total Content</h3>
+                    <div class="value" id="stat-total-items">0</div>
+                    <div class="sub">Movies: <span id="stat-movies">0</span> | Series: <span id="stat-series">0</span></div>
+                </div>
+                <div class="card">
+                    <h3>Views (Selected Period)</h3>
+                    <div class="value" style="color:var(--primary)" id="stat-views">0</div>
+                </div>
+                <div class="card">
+                    <h3>Watch Time (Selected Period)</h3>
+                    <div class="value" style="color:var(--series-color)" id="stat-time">0m</div>
+                </div>
+                <div class="card">
+                    <h3>Top Performer</h3>
+                    <div class="value" style="font-size: 1.2rem;" id="stat-top-name">-</div>
+                    <div class="sub" id="stat-top-views">0 views</div>
+                </div>
+            </div>
+
+            <div class="content-layout">
+                <div>
+                    <div class="card">
+                        <h3 style="margin-bottom: 20px;">Trending Top 10</h3>
+                        <div id="trending-container" class="trending-list"></div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="toolbar">
+                        <input type="text" id="search-input" class="search-input" placeholder="Search title..." onkeyup="filterTable()">
+                        <select id="type-filter" class="filter-select" onchange="filterTable()">
+                            <option value="all">All Types</option>
+                            <option value="movie">Movies</option>
+                            <option value="series">Series</option>
+                        </select>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Img</th><th>Title</th><th>Type</th><th>Views</th><th>Watch Time</th><th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        // Auth Imports Added
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // ==========================================
+        // CONFIGURATION (YOUR KEYS HERE)
+        // ==========================================
+        const firebaseConfig = {
+    apiKey: "AIzaSyDqxDVOGJR1_i7HM0NtUlQ2vdVtEBTxQfc",
+    authDomain: "easyfind-hk5x6.firebaseapp.com",
+    databaseURL: "https://easyfind-hk5x6-default-rtdb.firebaseio.com",
+    projectId: "easyfind-hk5x6",
+    storageBucket: "easyfind-hk5x6.firebasestorage.app",
+    messagingSenderId: "45912638549",
+    appId: "1:45912638549:web:3e8732b2bd4d15f3a300dc"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app); // Initialize Auth
+        const dbRef = ref(db);
+
+        // ==========================================
+        // STATE MANAGEMENT
+        // ==========================================
+        let state = {
+            allContent: [],
+            analyticsMap: {},
+            datesToFetch: [],
+            user: null
+        };
+
+        // ==========================================
+        // AUTHENTICATION LOGIC
+        // ==========================================
+        
+        // Listen for auth state changes (User Login/Logout)
+        onAuthStateChanged(auth, (user) => {
+            setLoading(false); // Stop loading once check is done
+            if (user) {
+                // User is signed in
+                state.user = user;
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('dashboard-view').style.display = 'block';
+                initDashboard(); // Load data only after login
+            } else {
+                // User is signed out
+                state.user = null;
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('dashboard-view').style.display = 'none';
+            }
+        });
+
+        window.handleLogin = async function() {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const errorMsg = document.getElementById('login-error');
+            
+            errorMsg.style.display = 'none';
+            setLoading(true);
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                // onAuthStateChanged will handle the redirect
+            } catch (error) {
+                setLoading(false);
+                console.error(error);
+                errorMsg.textContent = "Error: " + error.message;
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        window.handleLogout = function() {
+            signOut(auth).then(() => {
+                location.reload();
+            }).catch((error) => {
+                console.error("Logout error", error);
+            });
+        }
+
+        // ==========================================
+        // DATA LOGIC (Only runs after login)
+        // ==========================================
+
+        async function initDashboard() {
+            setLoading(true);
+            try {
+                const response = await fetch('/data/movies.json');
+                if (!response.ok) throw new Error("Could not load content.json");
+                state.allContent = await response.json();
+                window.setDateRange('today'); 
+            } catch (error) {
+                console.error("Init Error:", error);
+                alert("Error: " + error.message);
+                setLoading(false);
+            }
+        }
+
+        async function fetchAnalyticsData() {
+            setLoading(true);
+            state.analyticsMap = {}; 
+
+            try {
+                const promises = state.datesToFetch.map(dateStr => 
+                    get(child(dbRef, `analytics/daily/${dateStr}`))
+                );
+
+                const snapshots = await Promise.all(promises);
+
+                snapshots.forEach(snapshot => {
+                    if (snapshot.exists()) {
+                        const dayData = snapshot.val(); 
+                        ['movies', 'series'].forEach(type => {
+                            if (dayData[type]) {
+                                Object.keys(dayData[type]).forEach(slug => {
+                                    const key = `${type}-${slug}`;
+                                    const stats = dayData[type][slug];
+
+                                    if (!state.analyticsMap[key]) {
+                                        state.analyticsMap[key] = { views: 0, totalTime: 0 };
+                                    }
+                                    state.analyticsMap[key].views += (stats.views || 0);
+                                    state.analyticsMap[key].totalTime += (stats.totalTime || 0);
+                                });
+                            }
+                        });
+                    }
+                });
+
+                renderDashboard();
+            } catch (error) {
+                console.error("Firebase Error:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // ==========================================
+        // RENDERING UI
+        // ==========================================
+
+        function renderDashboard() {
+            const mergedData = state.allContent.map(item => {
+                const key = `${item.type}-${item.slug}`;
+                const stats = state.analyticsMap[key] || { views: 0, totalTime: 0 };
+                return { ...item, currentViews: stats.views, currentTime: stats.totalTime };
+            });
+
+            const totalMovies = mergedData.filter(i => i.type === 'movie').length;
+            const totalSeries = mergedData.filter(i => i.type === 'series').length;
+            const totalViews = mergedData.reduce((sum, item) => sum + item.currentViews, 0);
+            const totalTimeSec = mergedData.reduce((sum, item) => sum + item.currentTime, 0);
+
+            document.getElementById('stat-total-items').textContent = mergedData.length;
+            document.getElementById('stat-movies').textContent = totalMovies;
+            document.getElementById('stat-series').textContent = totalSeries;
+            document.getElementById('stat-views').textContent = totalViews.toLocaleString();
+            document.getElementById('stat-time').textContent = formatDuration(totalTimeSec);
+
+            const sortedByViews = [...mergedData].sort((a, b) => b.currentViews - a.currentViews);
+            
+            // Top Performer
+            if(sortedByViews.length > 0 && sortedByViews[0].currentViews > 0) {
+                document.getElementById('stat-top-name').textContent = truncate(sortedByViews[0].title, 20);
+                document.getElementById('stat-top-views').textContent = sortedByViews[0].currentViews + " views";
+            } else {
+                document.getElementById('stat-top-name').textContent = "-";
+                document.getElementById('stat-top-views').textContent = "0";
+            }
+
+            // Trending
+            const trendingContainer = document.getElementById('trending-container');
+            trendingContainer.innerHTML = '';
+            const activeItems = sortedByViews.filter(i => i.currentViews > 0).slice(0, 10);
+            
+            if (activeItems.length === 0) {
+                trendingContainer.innerHTML = '<div style="padding:10px; color:#aaa; text-align:center;">No views for this period</div>';
+            } else {
+                activeItems.forEach((item, index) => {
+                    const html = `
+                        <div class="trending-item">
+                            <div class="trending-rank">#${index + 1}</div>
+                            <img src="${item.thumbnail}" class="trending-thumb" alt="thumb">
+                            <div class="trending-info">
+                                <h4>${item.title}</h4>
+                                <div class="trending-stats">
+                                    <span class="badge ${item.type}">${item.type}</span> 
+                                    • <strong>${item.currentViews}</strong> views
+                                </div>
+                            </div>
+                        </div>`;
+                    trendingContainer.insertAdjacentHTML('beforeend', html);
+                });
+            }
+
+            window.currentTableData = sortedByViews;
+            filterTable();
+        }
+
+        window.renderTableRows = function(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const linkPath = item.type === 'movie' ? `/movies/${item.slug}.html` : `/series/${item.slug}.html`;
+                const row = `
+                    <tr>
+                        <td><img src="${item.thumbnail}" class="thumb-cell" loading="lazy"></td>
+                        <td><strong>${item.title}</strong><br><span style="font-size:0.8em;color:#999">${item.slug}</span></td>
+                        <td><span class="badge ${item.type}">${item.type}</span></td>
+                        <td>${item.currentViews}</td>
+                        <td>${formatDuration(item.currentTime)}</td>
+                        <td><a href="${linkPath}" target="_blank" class="link-btn">View →</a></td>
+                    </tr>`;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // ==========================================
+        // HELPERS
+        // ==========================================
+
+        window.setDateRange = function(rangeType) {
+            document.querySelectorAll('.controls .btn').forEach(b => b.classList.remove('active'));
+            if(rangeType !== 'custom') {
+                 const btn = document.getElementById('btn-' + rangeType);
+                 if(btn) btn.classList.add('active');
+            }
+
+            const today = new Date();
+            state.datesToFetch = [];
+
+            if (rangeType === 'today') {
+                state.datesToFetch.push(formatDate(today));
+                document.getElementById('date-picker').value = formatDate(today);
+            } 
+            else if (rangeType === 'yesterday') {
+                const yest = new Date(today);
+                yest.setDate(yest.getDate() - 1);
+                state.datesToFetch.push(formatDate(yest));
+                document.getElementById('date-picker').value = formatDate(yest);
+            }
+            else if (rangeType === 'last7') {
+                for(let i=0; i<7; i++) {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - i);
+                    state.datesToFetch.push(formatDate(d));
+                }
+                document.getElementById('date-picker').value = '';
+            }
+            else if (rangeType === 'custom') {
+                const val = document.getElementById('date-picker').value;
+                if(val) state.datesToFetch.push(val);
+            }
+            fetchAnalyticsData();
+        };
+
+        window.filterTable = function() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const type = document.getElementById('type-filter').value;
+            if (!window.currentTableData) return;
+            const filtered = window.currentTableData.filter(item => {
+                return (item.title.toLowerCase().includes(search) || item.slug.toLowerCase().includes(search)) && 
+                       (type === 'all' || item.type === type);
+            });
+            window.renderTableRows(filtered);
+        };
+
+        function formatDate(date) { return date.toISOString().split('T')[0]; }
+        function formatDuration(sec) { 
+            const m = Math.floor(sec / 60);
+            if (m < 60) return `${m}m`;
+            return `${(m/60).toFixed(1)}h`;
+        }
+        function truncate(str, n) { return (str.length > n) ? str.substr(0, n-1) + '&hellip;' : str; }
+        
+        function setLoading(isLoading) {
+            const el = document.getElementById('loader');
+            if(isLoading) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
+        // Init handled by onAuthStateChanged now
+
+    </script>
+</body>
+</html>
