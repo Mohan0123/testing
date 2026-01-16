@@ -113,7 +113,7 @@
                     </div>
                     <div class="btn-row">
                         <button class="btn btn-primary" onclick="generateMoviePage()">Generate Movie Page</button>
-                        <button class="btn" style="background:#10b981; color:#fff;" onclick="publishMovie()">🚀 PUBLISH MOVIE</button>
+                        <button class="btn" style="background:#059669; color:white;" onclick="publishMovie()">🚀 PUBLISH MOVIE</button>
                         <button class="btn btn-secondary" onclick="resetForm('movie')">Reset</button>
                     </div>
                 </div>
@@ -161,7 +161,7 @@
                     </div>
                     <div class="btn-row">
                         <button class="btn btn-primary" onclick="generateSeriesMain()">Generate Series Page</button>
-                        <button class="btn" style="background:#10b981; color:#fff;" onclick="publishSeriesMain()">🚀 PUBLISH SERIES</button>
+                        <button class="btn" style="background:#059669; color:white;" onclick="publishSeriesMain()">🚀 PUBLISH SERIES</button>
                         <button class="btn btn-secondary" onclick="resetForm('main')">Reset</button>
                     </div>
                 </div>
@@ -218,7 +218,7 @@
                     </div>
                     <div class="btn-row">
                         <button class="btn btn-primary" onclick="generateEpisodePage()">Generate Episode Page</button>
-                        <button class="btn" style="background:#10b981; color:#fff;" onclick="publishEpisode()">🚀 PUBLISH EPISODE</button>
+                        <button class="btn" style="background:#059669; color:white;" onclick="publishEpisode()">🚀 PUBLISH EPISODE</button>
                         <button class="btn btn-secondary" onclick="resetForm('ep')">Reset</button>
                     </div>
                 </div>
@@ -315,7 +315,7 @@
     function cleanStr(str) { return str ? str.replace(/"/g, '&quot;') : ""; }
 
     // ============================================
-    //  Generate MOVIE PAGE
+    //  Generate MOVIE PAGE (Merged from index.html)
     // ============================================
     function generateMoviePage() {
         // IDs renamed to avoid conflict with Series Main
@@ -894,117 +894,82 @@ function loadNextBatch() {
     }
 
     // ============================================
-    //  🚀 PUBLISH FUNCTIONALITY (NEW)
+    //  🚀 PUBLISH FUNCTIONALITY (NETLIFY / GITHUB)
     // ============================================
-    
+
     async function publishToServer(payload) {
-        // UI Feedback
+        if (!confirm("Confirm publish to GitHub?")) return;
+        
         const btn = event.target;
         const originalText = btn.innerText;
         btn.innerText = "⏳ Publishing...";
         btn.disabled = true;
 
         try {
-            const response = await fetch('/api/publish', {
+            const response = await fetch('/.netlify/functions/dispatch', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-secret': 'RANGINX_ADMIN_2025'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            const data = await response.json();
-
             if (response.ok) {
-                alert("✅ SUCCESS: Published to GitHub!");
+                alert("✅ Success! Workflow dispatched.");
             } else {
-                throw new Error(data.error || "Unknown server error");
+                const txt = await response.text();
+                alert("❌ Error: " + response.status + " - " + txt);
             }
-
-        } catch (error) {
-            console.error(error);
-            alert("❌ ERROR: " + error.message);
+        } catch (err) {
+            alert("❌ Network Error: " + err.message);
         } finally {
-            // Reset Button
-            if (btn) {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
+            btn.innerText = originalText;
+            btn.disabled = false;
         }
     }
 
     function publishMovie() {
-        // 1. Force Generate to ensure data is fresh
-        generateMoviePage();
-
-        // 2. Get Generated Data
+        generateMoviePage(); // Ensure fresh data
         const html = document.getElementById('htmlOut').textContent;
         const jsonStr = document.getElementById('jsonOut').textContent;
+        if (!html || !jsonStr) return alert("Generate content first!");
 
-        if (!html || !jsonStr) return alert("Error: Content not generated.");
-
-        const jsonObj = JSON.parse(jsonStr);
-
-        // 3. Construct Payload (Movie)
-        const payload = {
+        const json = JSON.parse(jsonStr);
+        publishToServer({
             type: "movie",
-            slug: jsonObj.slug,
+            slug: json.slug,
             html: html,
-            json: jsonObj
-        };
-
-        // 4. Send
-        publishToServer(payload);
+            json: json
+        });
     }
 
     function publishSeriesMain() {
-        // 1. Force Generate
-        generateSeriesMain();
-
-        // 2. Get Generated Data
+        generateSeriesMain(); // Ensure fresh data
         const html = document.getElementById('htmlOut').textContent;
         const jsonStr = document.getElementById('jsonOut').textContent;
+        if (!html || !jsonStr) return alert("Generate content first!");
 
-        if (!html || !jsonStr) return alert("Error: Content not generated.");
-
-        const jsonObj = JSON.parse(jsonStr);
-
-        // 3. Construct Payload (Series Main)
-        const payload = {
+        const json = JSON.parse(jsonStr);
+        publishToServer({
             type: "series-main",
-            slug: jsonObj.slug,
+            slug: json.slug,
             html: html,
-            json: jsonObj
-        };
-
-        // 4. Send
-        publishToServer(payload);
+            json: json
+        });
     }
 
     function publishEpisode() {
-        // 1. Force Generate
-        generateEpisodePage();
-
-        // 2. Get Generated Data
+        generateEpisodePage(); // Ensure fresh data
         const html = document.getElementById('htmlOut').textContent;
         const jsonStr = document.getElementById('jsonOut').textContent;
+        if (!html || !jsonStr) return alert("Generate content first!");
 
-        if (!html || !jsonStr) return alert("Error: Content not generated.");
-
-        const jsonObj = JSON.parse(jsonStr);
-
-        // 3. Construct Payload (Episode)
-        const payload = {
+        const json = JSON.parse(jsonStr);
+        publishToServer({
             type: "episode",
-            slug: jsonObj.series, // Parent series slug
-            episode: jsonObj.episode,
+            slug: json.series, // Mapped from generated JSON 'series' field
+            episode: json.episode,
             html: html,
-            json: jsonObj
-        };
-
-        // 4. Send
-        publishToServer(payload);
+            json: json
+        });
     }
 </script>
 </body>
