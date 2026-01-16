@@ -68,7 +68,14 @@
 <div class="main">
     <div class="top-bar">
         <span id="pageTitle">Movie Generator</span>
-        <a href="/" class="btn-secondary" style="padding:8px 15px; border-radius:4px; font-size:12px; text-decoration:none; color:white;">🏠 DASHBOARD</a>
+        
+        <div style="display:flex; align-items:center; gap:10px">
+            <button id="pubBtn" onclick="publishToServer(this)" disabled 
+                style="padding:8px 15px; border-radius:4px; font-size:12px; font-weight:800; background:#22c55e; color:#000; border:none; cursor:not-allowed; opacity:0.5; transition:0.3s;">
+                🚀 PUBLISH LIVE
+            </button>
+            <a href="/" class="btn-secondary" style="padding:8px 15px; border-radius:4px; font-size:12px; text-decoration:none; color:white;">🏠 DASHBOARD</a>
+        </div>
     </div>
     
     <div class="scroll-view">
@@ -236,7 +243,6 @@
                         <div style="display:flex; gap:10px">
                             <button class="copy-btn" onclick="copyText('htmlOut')">COPY HTML</button>
                             <button class="copy-btn" style="background:var(--primary);border:none" onclick="downloadHtml()">DOWNLOAD</button>
-                            <button class="copy-btn" style="background:#22c55e; color:#000; border:none; font-weight:800;" onclick="publishToServer(this)">🚀 PUBLISH</button>
                         </div>
                     </div>
                     <pre id="htmlOut"></pre>
@@ -261,7 +267,22 @@
         if(t === 'series-main') document.getElementById('pageTitle').innerText = 'Series Main Generator';
         if(t === 'series-ep') document.getElementById('pageTitle').innerText = 'Episode Page Generator';
         
-        document.getElementById('outputArea').style.display = 'none';
+        // FIX #3: Only hide output if no content has been generated yet
+        const outputArea = document.getElementById('outputArea');
+        const pubBtn = document.getElementById('pubBtn');
+
+        if (!currentSlug) {
+            outputArea.style.display = 'none';
+            pubBtn.disabled = true;
+            pubBtn.style.opacity = '0.5';
+            pubBtn.style.cursor = 'not-allowed';
+        } else {
+            // Ensure output remains visible and button enabled if data exists
+            outputArea.style.display = 'block';
+            pubBtn.disabled = false;
+            pubBtn.style.opacity = '1';
+            pubBtn.style.cursor = 'pointer';
+        }
     }
 
     // --- LIST BUILDER (SERIES) ---
@@ -297,6 +318,17 @@
         } else {
              document.querySelectorAll('#tab-series-ep input, #tab-series-ep textarea').forEach(e=>e.value='');
         }
+
+        // FIX #4: clear currentSlug and wipe output text to prevent state bugs
+        currentSlug = ""; 
+        document.getElementById('htmlOut').textContent = "";
+        document.getElementById('jsonOut').textContent = "";
+
+        const btn = document.getElementById('pubBtn');
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        document.getElementById('outputArea').style.display = 'none';
     }
 
     // --- HELPERS ---
@@ -516,10 +548,11 @@ function loadNextBatch() {
             title: data.name,
             slug: finalSlug,
             thumbnail: data.poster,
-            type: "movie"
+            type: "movie" // Fix #5: Consistent naming
         };
 
-        showOutput(html, JSON.stringify(jsonDb, null, 2) + ",", finalSlug);
+        // FIX #1: Removed trailing comma from JSON output
+        showOutput(html, JSON.stringify(jsonDb, null, 2), finalSlug);
     }
 
     // ============================================
@@ -560,7 +593,7 @@ function loadNextBatch() {
             title: data.title,
             slug: data.slug,
             thumbnail: data.poster,
-            type: "series"
+            type: "series-main" // Fix #5: Normalized type
         };
 
         let html = `<!DOCTYPE html>
@@ -813,6 +846,11 @@ function loadNextBatch() {
         document.getElementById('outputArea').style.display = 'block';
         document.getElementById('outputArea').scrollIntoView({behavior:'smooth'});
         document.getElementById('jsonBox').style.display = 'block'; 
+        
+        const btn = document.getElementById('pubBtn');
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
     }
 
     function copyText(id){
@@ -831,22 +869,18 @@ function loadNextBatch() {
         document.body.removeChild(a);
     }
 
-    // --- FIX #1, #2 & #3: SAFE PUBLISH FUNCTIONALITY ---
+    // --- FIX #2 & #5: SAFE PUBLISH FUNCTIONALITY ---
     function publishToServer(btn) {
-        // 1. Validation: Ensure content exists (Generated = Preview Only)
+        // 1. Validation
         const rawHtml = document.getElementById('htmlOut').textContent;
-        let rawJson = document.getElementById('jsonOut').textContent.trim();
+        const rawJson = document.getElementById('jsonOut').textContent.trim();
         
         if (!rawHtml || !rawJson) {
             alert("⚠️ Please GENERATE the content first before publishing.");
             return;
         }
 
-        // 2. Data Preparation: Fix JSON formatting (Remove trailing comma from showOutput)
-        if (rawJson.endsWith(',')) {
-            rawJson = rawJson.slice(0, -1);
-        }
-
+        // FIX #1: Removed "endsWith(',')" check. JSON must be valid at source.
         let data;
         try {
             data = JSON.parse(rawJson);
@@ -856,15 +890,16 @@ function loadNextBatch() {
             return;
         }
 
-        // 3. UI Feedback: Disable button safely (No global event)
+        // 3. UI Feedback
         const originalText = btn.innerText;
         btn.disabled = true;
         btn.innerText = "⏳ SENDING...";
         btn.style.opacity = "0.7";
 
-        // 4. Payload Construction (Strict Contract)
+        // 4. Payload Construction
         let payload = {};
 
+        // FIX #5: Normalized type checks
         if (data.type === 'movie') {
             payload = {
                 type: "movie",
@@ -872,7 +907,7 @@ function loadNextBatch() {
                 html: rawHtml,
                 json: data
             };
-        } else if (data.type === 'series') {
+        } else if (data.type === 'series-main' || data.type === 'series') {
             payload = {
                 type: "series-main",
                 slug: data.slug,
@@ -880,17 +915,19 @@ function loadNextBatch() {
                 json: data
             };
         } else if (data.type === 'episode') {
+            // FIX #2: Correct Episode Slug Logic
             payload = {
                 type: "episode",
-                slug: currentSlug, // Uses filename for slug
+                slug: data.series, // Use the parent series slug from JSON
                 episode: data.episode,
                 html: rawHtml,
                 json: data
             };
         } else {
-            alert("Unknown content type.");
+            alert("Unknown content type: " + data.type);
             btn.disabled = false;
             btn.innerText = originalText;
+            btn.style.opacity = "1";
             return;
         }
 
@@ -911,7 +948,6 @@ function loadNextBatch() {
             alert("❌ Network Error: " + error.message);
         })
         .finally(() => {
-            // Reset Button
             btn.disabled = false;
             btn.innerText = originalText;
             btn.style.opacity = "1";
