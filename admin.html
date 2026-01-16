@@ -113,7 +113,6 @@
                     </div>
                     <div class="btn-row">
                         <button class="btn btn-primary" onclick="generateMoviePage()">Generate Movie Page</button>
-                        <button class="btn" style="background:#059669; color:white;" onclick="publishMovie()">🚀 PUBLISH MOVIE</button>
                         <button class="btn btn-secondary" onclick="resetForm('movie')">Reset</button>
                     </div>
                 </div>
@@ -161,7 +160,6 @@
                     </div>
                     <div class="btn-row">
                         <button class="btn btn-primary" onclick="generateSeriesMain()">Generate Series Page</button>
-                        <button class="btn" style="background:#059669; color:white;" onclick="publishSeriesMain()">🚀 PUBLISH SERIES</button>
                         <button class="btn btn-secondary" onclick="resetForm('main')">Reset</button>
                     </div>
                 </div>
@@ -218,7 +216,6 @@
                     </div>
                     <div class="btn-row">
                         <button class="btn btn-primary" onclick="generateEpisodePage()">Generate Episode Page</button>
-                        <button class="btn" style="background:#059669; color:white;" onclick="publishEpisode()">🚀 PUBLISH EPISODE</button>
                         <button class="btn btn-secondary" onclick="resetForm('ep')">Reset</button>
                     </div>
                 </div>
@@ -239,6 +236,7 @@
                         <div style="display:flex; gap:10px">
                             <button class="copy-btn" onclick="copyText('htmlOut')">COPY HTML</button>
                             <button class="copy-btn" style="background:var(--primary);border:none" onclick="downloadHtml()">DOWNLOAD</button>
+                            <button class="copy-btn" style="background:#22c55e; color:#000; border:none; font-weight:800;" onclick="publishToServer(this)">🚀 PUBLISH</button>
                         </div>
                     </div>
                     <pre id="htmlOut"></pre>
@@ -315,10 +313,9 @@
     function cleanStr(str) { return str ? str.replace(/"/g, '&quot;') : ""; }
 
     // ============================================
-    //  Generate MOVIE PAGE (Merged from index.html)
+    //  Generate MOVIE PAGE
     // ============================================
     function generateMoviePage() {
-        // IDs renamed to avoid conflict with Series Main
         let data = {
             name: document.getElementById('movTitle').value.trim(),
             slugRaw: document.getElementById('movSlug').value.trim(),
@@ -333,9 +330,8 @@
         if(!data.name || !data.slugRaw || !data.video) return alert("Movie Name, Slug and Video URL are required!");
 
         let finalSlug = sanitizeSlug(data.slugRaw);
-        document.getElementById('movSlug').value = finalSlug; // Update input
+        document.getElementById('movSlug').value = finalSlug;
 
-        // Auto-Gen Text
         let finalTitle = data.seoTitle || `Watch ${data.name} Full HD Movie Online Free | Ranginx`;
         finalTitle = finalTitle.substring(0, 60);
 
@@ -345,18 +341,13 @@
         if(data.storyline) {
             finalStoryHtml = data.storyline.split('\n').map(l => l.trim() ? `<p>${l}</p>` : '').join('');
         } else {
-            finalStoryHtml = `
-            <p><strong>${data.name}</strong> is now available to watch online in full HD quality on Ranginx. This movie delivers an engaging experience with high-quality visuals and audio. You can enjoy the complete film without any interruptions.</p>
-            <p>Stream <strong>${data.name}</strong> with <strong>free streaming</strong> and <strong>no registration</strong>. Our platform is optimized for <strong>mobile & desktop</strong> devices, ensuring fast loading speeds and smooth playback.</p>
-            <p>Ranginx is your trusted destination for free entertainment. We provide a secure and premium viewing experience. Start watching ${data.name} now and enjoy the best of cinema.</p>`;
+            finalStoryHtml = `<p><strong>${data.name}</strong> is now available to watch online in full HD quality on Ranginx...</p>`;
         }
 
-        // Tags
         let tagsList = data.tagsRaw.split(',').map(t => t.trim()).filter(t => t.length > 0).slice(0, 8);
         let tagsHtml = tagsList.length > 0 ? 
             `<div class="tags">${tagsList.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : '';
 
-        // Player Logic
         let isMp4 = data.video.includes('.mp4') || data.video.includes('.mkv');
         let style = `width:100%;height:100%;object-fit:contain;background:#000;border-radius:12px;`;
         let playerHtml = "";
@@ -366,7 +357,6 @@
             playerHtml = `<iframe src="${data.video}" allowfullscreen scrolling="no" allow="encrypted-media; picture-in-picture" style="${style};border:none"></iframe>`;
         }
 
-        // Schema
         let schemaData = {
             "@context": "https://schema.org",
             "@type": "Movie",
@@ -377,13 +367,9 @@
             "inLanguage": "en",
             "genre": tagsList.length > 0 ? tagsList : ["Entertainment"],
             "publisher": { "@type": "Organization", "name": "Ranginx" },
-            "potentialAction": {
-                "@type": "WatchAction",
-                "target": `https://ranginx.fun/movies/${finalSlug}.html`
-            }
+            "potentialAction": { "@type": "WatchAction", "target": `https://ranginx.fun/movies/${finalSlug}.html` }
         };
 
-        // Final HTML Construction
         let html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -452,9 +438,7 @@ footer{background:#000;padding:50px 20px;text-align:center;font-size:13px;color:
     <div class="logo">RANGINX</div>
     <a href="/" class="home-btn">🏠 HOME</a>
 </header>
-
 <div class="video-area" id="video-box">${playerHtml}</div>
-
 <div class="container">
     <div class="main-col">
         <div class="content-pad">
@@ -464,15 +448,12 @@ footer{background:#000;padding:50px 20px;text-align:center;font-size:13px;color:
                 <span class="badge" style="background:var(--p)">Free</span>
                 <span>Streaming Now</span>
             </div>
-
             <div class="social-row">
                  <a href="https://t.me/share/url?url=https://ranginx.fun/movies/${finalSlug}.html" target="_blank" class="soc-btn tg">Telegram</a>
                  <a href="https://api.whatsapp.com/send?text=Watch: https://ranginx.fun/movies/${finalSlug}.html" target="_blank" class="soc-btn wa">WhatsApp</a>
                  <button class="soc-btn cp" onclick="copyLink()">Copy Link</button>
             </div>
-
             <div id="ad-banner" class="ad-box"></div>
-
             <div class="story-card">
                 <div class="card-head">📝 Storyline</div>
                 <div class="desc-text">${finalStoryHtml}</div>
@@ -480,7 +461,6 @@ footer{background:#000;padding:50px 20px;text-align:center;font-size:13px;color:
             </div>
         </div>
     </div>
-
     <div class="side-col">
         <div class="related-sec">
             <div class="sec-title">You May Also Like</div>
@@ -490,47 +470,32 @@ footer{background:#000;padding:50px 20px;text-align:center;font-size:13px;color:
         </div>
     </div>
 </div>
-
 <footer>
     © 2025 Ranginx. All rights reserved.<br><br>
     <a href="/dmca.html" style="color:#777;margin:0 10px">DMCA</a>
     <a href="/terms.html" style="color:#777;margin:0 10px">Terms</a>
     <a href="/privacy.html" style="color:#777;margin:0 10px">Privacy</a>
 </footer>
-
 <script>
 function copyLink(){ navigator.clipboard.writeText(window.location.href).then(()=>alert("Link Copied!")); }
-
 let allData = []; let currentIndex = 0; const itemsPerPage = 6; const currentSlug = "${finalSlug}";
-
 document.addEventListener("DOMContentLoaded", ()=>{
     const grid = document.getElementById('related-grid');
-    fetch('/data/movies.json')
-    .then(r=>{if(!r.ok)throw new Error();return r.json()})
-    .then(d=>{
+    fetch('/data/movies.json').then(r=>{if(!r.ok)throw new Error();return r.json()}).then(d=>{
         allData = d.filter(m=>m.slug !== currentSlug);
-        if(allData.length > 0) loadNextBatch();
-        else grid.innerHTML = '<div style="padding:10px;color:#555">No related content</div>';
-    })
-    .catch(()=>{
-        console.log("Local Mode");
-        grid.innerHTML = '<div style="padding:10px;color:#555">Loading related... (Server needed)</div>';
-        document.getElementById('loadBtn').style.display='none';
-    });
+        if(allData.length > 0) loadNextBatch(); else grid.innerHTML = '<div style="padding:10px;color:#555">No related content</div>';
+    }).catch(()=>{ console.log("Local Mode"); grid.innerHTML = '<div style="padding:10px;color:#555">Loading related... (Server needed)</div>'; document.getElementById('loadBtn').style.display='none'; });
 });
-
 function loadNextBatch() {
     const grid = document.getElementById('related-grid');
     const btn = document.getElementById('loadBtn');
     let nextBatch = allData.slice(currentIndex, currentIndex + itemsPerPage);
-
     nextBatch.forEach(m => {
         let type = (m.type || 'movie').toLowerCase();
         let folder = 'movies';
         if (type === 'series' || type === 'episode') folder = 'series';
         let cleanSlug = String(m.slug || '').replace(/^movies\\//,'').replace(/^series\\//,'').replace(/\\.html$/,'').replace(/^\\//,'');
         let finalUrl = type === 'episode' ? \`/series/\${cleanSlug}.html\` : \`/\${folder}/\${cleanSlug}.html\`;
-
         grid.innerHTML += \`
             <a href="\${finalUrl}" class="rel-card">
                 <img src="\${m.thumbnail}" class="rel-img" loading="lazy" alt="\${m.title}">
@@ -558,7 +523,7 @@ function loadNextBatch() {
     }
 
     // ============================================
-    //  Generate SERIES MAIN PAGE (Formatted)
+    //  Generate SERIES MAIN PAGE
     // ============================================
     function generateSeriesMain() {
         let titleRaw = document.getElementById('mTitle').value.trim();
@@ -591,7 +556,6 @@ function loadNextBatch() {
         </a>`;
         });
 
-        // JSON Data
         let jsonDb = {
             title: data.title,
             slug: data.slug,
@@ -694,7 +658,6 @@ function loadNextBatch() {
             thumbnail: data.thumb
         };
 
-        // --- PRETTY FORMATTED HTML ---
         let html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -757,13 +720,11 @@ function loadNextBatch() {
     <div class="logo">RANGINX</div>
     <a href="/" class="home-btn">🏠 HOME</a>
 </header>
-
 <div class="video-area" id="video-box">
     <video controls playsinline preload="metadata" poster="${data.thumb}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:contain;background:#000;">
         <source src="${data.video}">
     </video>
 </div>
-
 <div class="container">
     <div class="main-col">
         <div class="content-pad">
@@ -774,15 +735,12 @@ function loadNextBatch() {
                 <span>Free</span>
                 <a href="/series/${data.parentSlug}.html" class="series-link"> • ${data.seriesTitle}</a>
             </div>
-
             <div class="social-row">
                  <a href="https://t.me/share/url?url=${pageUrl}" target="_blank" class="soc-btn tg">Telegram</a>
                  <a href="https://api.whatsapp.com/send?text=Watch: ${pageUrl}" target="_blank" class="soc-btn wa">WhatsApp</a>
                  <button class="soc-btn cp" onclick="copyLink()">Copy Link</button>
             </div>
-
             <div id="ad-banner" class="ad-box"></div>
-            
             <div class="story-card">
                 <div class="card-head">📖 Storyline</div>
                 <div class="desc-text">${data.desc}</div>
@@ -790,7 +748,6 @@ function loadNextBatch() {
             </div>
         </div>
     </div>
-
     <div class="side-col">
         <div class="related-sec">
             <div class="sec-title">You May Also Like</div>
@@ -800,55 +757,36 @@ function loadNextBatch() {
         </div>
     </div>
 </div>
-
 <footer>
     © 2025 Ranginx. All rights reserved.<br>
     <a href='/dmca' style='color:#777;margin:0 5px'>DMCA</a>
     <a href='/terms' style='color:#777;margin:0 5px'>Terms</a>
     <a href='/privacy' style='color:#777;margin:0 5px'>Privacy</a>
 </footer>
-
 <script>
 function copyLink(){
     let t=document.createElement("textarea"); t.value=window.location.href; t.style.position="fixed";
     document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t);
     alert("Link Copied!");
 }
-
 let allData = []; let currentIndex = 0; const itemsPerPage = 6; const currentSlug = "${slug}";
-
 document.addEventListener("DOMContentLoaded", ()=>{
     const grid = document.getElementById('related-grid');
-    fetch('/data/movies.json')
-    .then(r=>{if(!r.ok)throw new Error();return r.json()})
-    .then(d=>{
+    fetch('/data/movies.json').then(r=>{if(!r.ok)throw new Error();return r.json()}).then(d=>{
         allData = d.filter(m=>m.slug !== currentSlug);
-        if(allData.length === 0) {
-             grid.innerHTML = '<div style="padding:10px;color:#555">No related content found</div>';
-             document.getElementById('loadBtn').style.display='none';
-        } else {
-             loadNextBatch();
-        }
-    })
-    .catch(()=>{
-        console.log("Local Mode");
-        grid.innerHTML = '<div style="padding:10px;color:#555">Related content unavailable (Server Required)</div>';
-        document.getElementById('loadBtn').style.display='none';
-    });
+        if(allData.length === 0) { grid.innerHTML = '<div style="padding:10px;color:#555">No related content found</div>'; document.getElementById('loadBtn').style.display='none'; } else { loadNextBatch(); }
+    }).catch(()=>{ console.log("Local Mode"); grid.innerHTML = '<div style="padding:10px;color:#555">Related content unavailable (Server Required)</div>'; document.getElementById('loadBtn').style.display='none'; });
 });
-
 function loadNextBatch() {
     const grid = document.getElementById('related-grid');
     const btn = document.getElementById('loadBtn');
     let nextBatch = allData.slice(currentIndex, currentIndex + itemsPerPage);
-
     nextBatch.forEach(m => {
         let type = (m.type || 'movie').toLowerCase();
         let folder = 'movies';
         if (type === 'series' || type === 'episode') folder = 'series';
         let cleanSlug = String(m.slug || '').replace(/^movies\\//, '').replace(/^series\\//, '').replace(/\\.html$/, '').replace(/^\\//, '');
         let finalUrl = type === 'episode' ? \`/series/\${cleanSlug}.html\` : \`/\${folder}/\${cleanSlug}.html\`;
-
         grid.innerHTML += \`
             <a href="\${finalUrl}" class="rel-card">
                 <img src="\${m.thumbnail}" class="rel-img" loading="lazy" alt="\${m.title}">
@@ -893,82 +831,90 @@ function loadNextBatch() {
         document.body.removeChild(a);
     }
 
-    // ============================================
-    //  🚀 PUBLISH FUNCTIONALITY (NETLIFY / GITHUB)
-    // ============================================
-
-    async function publishToServer(payload) {
-        if (!confirm("Confirm publish to GitHub?")) return;
+    // --- FIX #1, #2 & #3: SAFE PUBLISH FUNCTIONALITY ---
+    function publishToServer(btn) {
+        // 1. Validation: Ensure content exists (Generated = Preview Only)
+        const rawHtml = document.getElementById('htmlOut').textContent;
+        let rawJson = document.getElementById('jsonOut').textContent.trim();
         
-        const btn = event.target;
-        const originalText = btn.innerText;
-        btn.innerText = "⏳ Publishing...";
-        btn.disabled = true;
-
-        try {
-            const response = await fetch('/.netlify/functions/dispatch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                alert("✅ Success! Workflow dispatched.");
-            } else {
-                const txt = await response.text();
-                alert("❌ Error: " + response.status + " - " + txt);
-            }
-        } catch (err) {
-            alert("❌ Network Error: " + err.message);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
+        if (!rawHtml || !rawJson) {
+            alert("⚠️ Please GENERATE the content first before publishing.");
+            return;
         }
-    }
 
-    function publishMovie() {
-        generateMoviePage(); // Ensure fresh data
-        const html = document.getElementById('htmlOut').textContent;
-        const jsonStr = document.getElementById('jsonOut').textContent;
-        if (!html || !jsonStr) return alert("Generate content first!");
+        // 2. Data Preparation: Fix JSON formatting (Remove trailing comma from showOutput)
+        if (rawJson.endsWith(',')) {
+            rawJson = rawJson.slice(0, -1);
+        }
 
-        const json = JSON.parse(jsonStr);
-        publishToServer({
-            type: "movie",
-            slug: json.slug,
-            html: html,
-            json: json
-        });
-    }
+        let data;
+        try {
+            data = JSON.parse(rawJson);
+        } catch (err) {
+            alert("Error parsing generated JSON. Please regenerate.");
+            console.error(err);
+            return;
+        }
 
-    function publishSeriesMain() {
-        generateSeriesMain(); // Ensure fresh data
-        const html = document.getElementById('htmlOut').textContent;
-        const jsonStr = document.getElementById('jsonOut').textContent;
-        if (!html || !jsonStr) return alert("Generate content first!");
+        // 3. UI Feedback: Disable button safely (No global event)
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "⏳ SENDING...";
+        btn.style.opacity = "0.7";
 
-        const json = JSON.parse(jsonStr);
-        publishToServer({
-            type: "series-main",
-            slug: json.slug,
-            html: html,
-            json: json
-        });
-    }
+        // 4. Payload Construction (Strict Contract)
+        let payload = {};
 
-    function publishEpisode() {
-        generateEpisodePage(); // Ensure fresh data
-        const html = document.getElementById('htmlOut').textContent;
-        const jsonStr = document.getElementById('jsonOut').textContent;
-        if (!html || !jsonStr) return alert("Generate content first!");
+        if (data.type === 'movie') {
+            payload = {
+                type: "movie",
+                slug: data.slug,
+                html: rawHtml,
+                json: data
+            };
+        } else if (data.type === 'series') {
+            payload = {
+                type: "series-main",
+                slug: data.slug,
+                html: rawHtml,
+                json: data
+            };
+        } else if (data.type === 'episode') {
+            payload = {
+                type: "episode",
+                slug: currentSlug, // Uses filename for slug
+                episode: data.episode,
+                html: rawHtml,
+                json: data
+            };
+        } else {
+            alert("Unknown content type.");
+            btn.disabled = false;
+            btn.innerText = originalText;
+            return;
+        }
 
-        const json = JSON.parse(jsonStr);
-        publishToServer({
-            type: "episode",
-            slug: json.series, // Mapped from generated JSON 'series' field
-            episode: json.episode,
-            html: html,
-            json: json
+        // 5. Network Request
+        fetch('/.netlify/functions/dispatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (response.ok) {
+                alert("✅ Successfully Published to Server!");
+            } else {
+                alert("❌ Server Error: " + response.statusText);
+            }
+        })
+        .catch(error => {
+            alert("❌ Network Error: " + error.message);
+        })
+        .finally(() => {
+            // Reset Button
+            btn.disabled = false;
+            btn.innerText = originalText;
+            btn.style.opacity = "1";
         });
     }
 </script>
